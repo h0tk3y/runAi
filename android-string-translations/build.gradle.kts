@@ -1,5 +1,5 @@
 plugins {
-    id("graidle.gradle-plugin")
+    id("runai.gradle-plugin")
 }
 
 dependencies {
@@ -12,10 +12,10 @@ dependencies {
 gradlePlugin {
     plugins {
         create("androidStringTranslations") {
-            id = "dev.graidle.android-string-translations"
-            implementationClass = "dev.graidle.android.AndroidStringTranslationsPlugin"
-            displayName = "grAIdle Android string translations"
-            description = "Translates Android string resources with grAIdle, and adds them to every variant."
+            id = "dev.runai.android-string-translations"
+            implementationClass = "dev.runai.android.AndroidStringTranslationsPlugin"
+            displayName = "runAi Android string translations"
+            description = "Translates Android string resources with runAi, and adds them to every variant."
         }
     }
 }

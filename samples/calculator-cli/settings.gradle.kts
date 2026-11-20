@@ -1,5 +1,5 @@
 pluginManagement {
-    // The convention plugin that every module applies. It brings in the grAIdle plugins from this repository.
+    // The convention plugin that every module applies. It brings in the runAi plugins from this repository.
     includeBuild("build-logic")
     repositories {
         gradlePluginPortal()

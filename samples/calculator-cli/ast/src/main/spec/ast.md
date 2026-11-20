@@ -5,7 +5,7 @@ The syntax tree of an arithmetic expression.
 ## API
 
 ```kotlin
-package dev.graidle.demo.calc.ast
+package dev.runai.demo.calc.ast
 
 enum class BinaryOperator(val symbol: Char) {
     PLUS('+'), MINUS('-'), TIMES('*'), DIVIDE('/'), POWER('^')

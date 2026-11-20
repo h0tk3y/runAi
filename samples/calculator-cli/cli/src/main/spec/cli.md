@@ -5,7 +5,7 @@ The `calc` command: evaluates the arithmetic expression given as its arguments. 
 ## API
 
 ```kotlin
-package dev.graidle.demo.calc.cli
+package dev.runai.demo.calc.cli
 
 fun run(args: List<String>, out: Appendable, err: Appendable): Int
 

@@ -1,5 +1,5 @@
 pluginManagement {
-    // Builds the grAIdle plugin from this repository, so the demo always uses the current source.
+    // Builds the runAi plugin from this repository, so the demo always uses the current source.
     includeBuild("../..")
     repositories {
         google()
@@ -16,6 +16,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "graidle-demo"
+rootProject.name = "runai-demo"
 
 include(":app")

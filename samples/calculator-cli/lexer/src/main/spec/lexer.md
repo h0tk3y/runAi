@@ -5,7 +5,7 @@ Splits the text of an arithmetic expression into tokens.
 ## API
 
 ```kotlin
-package dev.graidle.demo.calc.lexer
+package dev.runai.demo.calc.lexer
 
 enum class TokenType { NUMBER, PLUS, MINUS, TIMES, DIVIDE, POWER, LEFT_PAREN, RIGHT_PAREN }
 

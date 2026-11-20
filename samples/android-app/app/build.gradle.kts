@@ -1,14 +1,14 @@
 plugins {
     id("com.android.application")
-    id("dev.graidle.android-string-translations")
+    id("dev.runai.android-string-translations")
 }
 
 android {
-    namespace = "dev.graidle.demo"
+    namespace = "dev.runai.demo"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.graidle.demo"
+        applicationId = "dev.runai.demo"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -16,8 +16,8 @@ android {
     }
 }
 
-// Settings shared by all grAIdle tasks, from the core plugin. The defaults are fine for this demo:
-graidle { model = "claude-haiku-5-5" }
+// Settings shared by all runAi tasks, from the core plugin. The defaults are fine for this demo:
+runAi { model = "claude-haiku-5-5" }
 
 androidStringTranslations {
     locales("de", "fr", "ja", "pt-rBR")

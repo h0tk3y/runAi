@@ -2,7 +2,7 @@
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
-    id("dev.graidle.spec-driven-kotlin")
+    id("dev.runai.spec-driven-kotlin")
 }
 
 kotlin {
@@ -14,7 +14,7 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-graidle {
+runAi {
     model = "claude-haiku-5-5"
 }
 

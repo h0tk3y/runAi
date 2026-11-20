@@ -1,5 +1,5 @@
 plugins {
-    id("graidle.gradle-plugin")
+    id("runai.gradle-plugin")
     `java-test-fixtures`
 }
 
@@ -10,10 +10,10 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("graidle") {
-            id = "dev.graidle"
-            implementationClass = "dev.graidle.GraidlePlugin"
-            displayName = "grAIdle"
+        create("runAi") {
+            id = "dev.runai"
+            implementationClass = "dev.runai.RunAiPlugin"
+            displayName = "runAi"
             description = "Gradle tasks that ask an AI model for a result, committed with a lock file."
         }
     }

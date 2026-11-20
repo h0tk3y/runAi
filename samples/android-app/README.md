@@ -1,6 +1,6 @@
-# grAIdle demo: Notely
+# runAi demo: Notely
 
-A one-screen Android app that uses grAIdle to translate its strings into German, French, Japanese and Brazilian Portuguese. The demo uses the plugin source from this repository, so it always runs the current code.
+A one-screen Android app that uses runAi to translate its strings into German, French, Japanese and Brazilian Portuguese. The demo uses the plugin source from this repository, so it always runs the current code.
 
 The strings in `app/src/main/res/values/strings.xml` cover the cases the translation task must handle:
 
@@ -10,7 +10,7 @@ The strings in `app/src/main/res/values/strings.xml` cover the cases the transla
 - `<b>` markup, and apostrophes that must be escaped
 - a string marked `translatable="false"`
 
-`app/i18n/glossary.md` fixes the product terms. `app/build.gradle.kts` applies `dev.graidle.android-string-translations` and adds instructions for all locales and for German only, in the `androidStringTranslations` block.
+`app/i18n/glossary.md` fixes the product terms. `app/build.gradle.kts` applies `dev.runai.android-string-translations` and adds instructions for all locales and for German only, in the `androidStringTranslations` block.
 
 All commands run in this directory (`samples/android-app`).
 
@@ -22,7 +22,7 @@ All commands run in this directory (`samples/android-app`).
 Check the setup without the model. This builds the app without translations:
 
 ```bash
-./gradlew :app:assembleDebug -Pgraidle.mode=off
+./gradlew :app:assembleDebug -PrunAi.mode=off
 ```
 
 ## 2. Connect Claude
@@ -38,25 +38,25 @@ Create an API key in the Claude Console. Then give it to Gradle in one of two wa
 - **User Gradle properties**, for builds started from Android Studio, which does not see variables you export in a terminal. Add this line to `~/.gradle/gradle.properties`. That file is in your home directory, not in the project, so the key is never committed:
 
   ```properties
-  graidle.apiKey=sk-ant-...
+  runAi.apiKey=sk-ant-...
   ```
 
-To use a different model, set `graidle { model = "..." }` in `app/build.gradle.kts`. The default is `claude-haiku-5-5`; a larger model such as `claude-opus-5-5` costs more. The model ID is part of the fingerprint, so changing it makes every committed result out of date.
+To use a different model, set `runAi { model = "..." }` in `app/build.gradle.kts`. The default is `claude-haiku-5-5`; a larger model such as `claude-opus-5-5` costs more. The model ID is part of the fingerprint, so changing it makes every committed result out of date.
 
 ## 3. Generate the translations
 
-Outside CI, grAIdle runs in `live` mode, so a normal build generates missing translations:
+Outside CI, runAi runs in `live` mode, so a normal build generates missing translations:
 
 ```bash
 ./gradlew :app:translateStrings
 ```
 
-Expect four model requests, one for each locale. The build ends with a line such as `grAIdle: 4 model request(s), ... input tokens, ... output tokens.`
+Expect four model requests, one for each locale. The build ends with a line such as `runAi: 4 model request(s), ... input tokens, ... output tokens.`
 
-The results are in `app/graidle/translations/`:
+The results are in `app/runAi/translations/`:
 
 ```text
-app/graidle/translations/
+app/runAi/translations/
   de/values-de/strings.xml
   de.lock
   fr/values-fr/strings.xml
@@ -67,7 +67,7 @@ app/graidle/translations/
   pt-rBR.lock
 ```
 
-To see what the model was asked and what it answered, open `app/build/graidle/transcripts/translateStringsJa.json`. It also lists retries, and the problems that caused them.
+To see what the model was asked and what it answered, open `app/build/runAi/transcripts/translateStringsJa.json`. It also lists retries, and the problems that caused them.
 
 ## 4. Review, run and commit
 
@@ -78,13 +78,13 @@ To see what the model was asked and what it answered, open `app/build/graidle/tr
    ./gradlew :app:installDebug
    ```
 
-3. Commit `app/graidle/`, including the `.lock` files.
+3. Commit `app/runAi/`, including the `.lock` files.
 
-In this repository, `.gitignore` excludes the samples' `graidle/` folders, so your demo runs are not committed here. In your own project, commit them.
+In this repository, `.gitignore` excludes the samples' `runAi/` folders, so your demo runs are not committed here. In your own project, commit them.
 
 ## 5. Build like CI
 
-On CI, grAIdle runs in `replay` mode: it uses the committed results, needs no API key, and never calls the model. It detects CI from `CI`, `JENKINS_URL`, `TEAMCITY_VERSION`, `TF_BUILD` or `CODEBUILD_BUILD_ID`. On other CI servers, add `-Pgraidle.mode=replay`.
+On CI, runAi runs in `replay` mode: it uses the committed results, needs no API key, and never calls the model. It detects CI from `CI`, `JENKINS_URL`, `TEAMCITY_VERSION`, `TF_BUILD` or `CODEBUILD_BUILD_ID`. On other CI servers, add `-PrunAi.mode=replay`.
 
 Simulate a CI build without your key:
 
@@ -94,14 +94,14 @@ env -u ANTHROPIC_API_KEY CI=true ./gradlew :app:assembleDebug
 
 ## 6. Things to try
 
-- **Forget to update translations.** Change `Share` to `Share note` in `strings.xml`, then build like CI. The build fails, says the inputs changed, and gives the command to run. A local `./gradlew :app:assembleDebug` updates the translations instead; review the diff in `app/graidle/`.
+- **Forget to update translations.** Change `Share` to `Share note` in `strings.xml`, then build like CI. The build fails, says the inputs changed, and gives the command to run. A local `./gradlew :app:assembleDebug` updates the translations instead; review the diff in `app/runAi/`.
 - **Change something that does not matter.** Add a comment or reformat `strings.xml`. The fingerprint does not change, so nothing is generated again.
-- **Fix a translation by hand.** Change a word in `app/graidle/translations/de/values-de/strings.xml` and build like CI. The edit is kept.
+- **Fix a translation by hand.** Change a word in `app/runAi/translations/de/values-de/strings.xml` and build like CI. The edit is kept.
 - **Break a translation by hand.** Remove `%1$s` from the German `greeting` and build like CI. The build fails and names the broken rule.
 - **Add a locale.** Add `"es"` to `locales(...)` and build. Only the new locale is generated.
 
 ## Troubleshooting
 
 - **"No API key is configured"**: see step 2. If you build from Android Studio, use `~/.gradle/gradle.properties`.
-- **"grAIdle cannot use the committed result"** in a local build: you are in `replay` mode. Check for `CI` in your environment, or `graidle.mode` in a `gradle.properties` file.
-- **`NoClassDefFoundError` for an Android class**: grAIdle and the Android plugin must load in the same classloader. Keep both in the root `build.gradle.kts` with `apply false`, as this demo does.
+- **"runAi cannot use the committed result"** in a local build: you are in `replay` mode. Check for `CI` in your environment, or `runAi.mode` in a `gradle.properties` file.
+- **`NoClassDefFoundError` for an Android class**: runAi and the Android plugin must load in the same classloader. Keep both in the root `build.gradle.kts` with `apply false`, as this demo does.

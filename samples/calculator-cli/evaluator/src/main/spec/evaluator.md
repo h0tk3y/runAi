@@ -5,9 +5,9 @@ Computes the value of a syntax tree.
 ## API
 
 ```kotlin
-package dev.graidle.demo.calc.evaluator
+package dev.runai.demo.calc.evaluator
 
-import dev.graidle.demo.calc.ast.Expr
+import dev.runai.demo.calc.ast.Expr
 
 class EvaluationException(message: String) : Exception(message)
 

@@ -1,5 +1,5 @@
 plugins {
-    id("graidle.gradle-plugin")
+    id("runai.gradle-plugin")
 }
 
 dependencies {
@@ -13,9 +13,9 @@ dependencies {
 gradlePlugin {
     plugins {
         create("specDrivenKotlin") {
-            id = "dev.graidle.spec-driven-kotlin"
-            implementationClass = "dev.graidle.specs.SpecDrivenKotlinPlugin"
-            displayName = "grAIdle spec-driven Kotlin"
+            id = "dev.runai.spec-driven-kotlin"
+            implementationClass = "dev.runai.specs.SpecDrivenKotlinPlugin"
+            displayName = "runAi spec-driven Kotlin"
             description = "Generates Kotlin code and tests from Markdown specs, and publishes the specs to dependent modules."
         }
     }
@@ -30,7 +30,7 @@ testing {
             targets.configureEach {
                 testTask.configure {
                     // The test builds apply the Kotlin plugin from the Gradle Plugin Portal.
-                    systemProperty("graidle.test.kotlinVersion", libs.versions.kotlin.get())
+                    systemProperty("runAi.test.kotlinVersion", libs.versions.kotlin.get())
                 }
             }
         }

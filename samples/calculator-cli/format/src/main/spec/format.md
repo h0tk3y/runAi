@@ -5,7 +5,7 @@ Writes a computed number for people to read.
 ## API
 
 ```kotlin
-package dev.graidle.demo.calc.format
+package dev.runai.demo.calc.format
 
 fun formatNumber(value: Double): String
 ```

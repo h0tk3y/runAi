@@ -23,7 +23,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "graidle"
+rootProject.name = "runAi"
 
 // The general-purpose plugin: AI tasks, modes, lock files. No Android or other domain code.
 include(":core")

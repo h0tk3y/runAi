@@ -1,4 +1,4 @@
-# grAIdle demo: calc, a calculator built from specs
+# runAi demo: calc, a calculator built from specs
 
 `calc` evaluates arithmetic expressions on the command line:
 
@@ -11,7 +11,7 @@ Error: Missing ')'
         ^
 ```
 
-It has six small modules. Each module has only a Markdown spec, in `src/main/spec`. grAIdle's `dev.graidle.spec-driven-kotlin` plugin generates the Kotlin code and the tests of each module from its spec. You review and commit the results, like any other source change.
+It has six small modules. Each module has only a Markdown spec, in `src/main/spec`. runAi's `dev.runai.spec-driven-kotlin` plugin generates the Kotlin code and the tests of each module from its spec. You review and commit the results, like any other source change.
 
 ```text
 ast      lexer      format
@@ -29,23 +29,23 @@ evaluator             |
 
 ## How it works
 
-Each module applies the `calc.module` convention plugin from `build-logic`. It applies the Kotlin plugin and `dev.graidle.spec-driven-kotlin`, and adds `kotlin.test`. The grAIdle plugins come from this repository: `build-logic` includes it as a composite build.
+Each module applies the `calc.module` convention plugin from `build-logic`. It applies the Kotlin plugin and `dev.runai.spec-driven-kotlin`, and adds `kotlin.test`. The runAi plugins come from this repository: `build-logic` includes it as a composite build.
 
 A spec has two parts:
 
 - **`## API`**: a `kotlin` code block with the package and the public declarations of the module. It is the contract with the other modules.
 - **Rules**: numbered statements of what the module does, including the errors.
 
-For each module, the plugin registers two grAIdle tasks:
+For each module, the plugin registers two runAi tasks:
 
 | Task | Writes | Into |
 |---|---|---|
-| `generateKotlinFromSpec` | the implementation | `graidle/main/kotlin`, a source directory of `main` |
-| `generateTestsFromSpec` | tests, one or more per rule | `graidle/test/kotlin`, a source directory of `test` |
+| `generateKotlinFromSpec` | the implementation | `runAi/main/kotlin`, a source directory of `main` |
+| `generateTestsFromSpec` | tests, one or more per rule | `runAi/test/kotlin`, a source directory of `test` |
 
 The two tasks never see each other's output. They work from the same spec separately, so `test` checks the code against the spec.
 
-Each module also publishes its spec as a `graidle-spec` variant. Both tasks read the specs of the modules on the compile classpath from that variant. So `parser` sees the specs of `ast` and `lexer`. Check what a module publishes with `./gradlew :ast:outgoingVariants --variant specElements`.
+Each module also publishes its spec as a `runai-spec` variant. Both tasks read the specs of the modules on the compile classpath from that variant. So `parser` sees the specs of `ast` and `lexer`. Check what a module publishes with `./gradlew :ast:outgoingVariants --variant specElements`.
 
 The model also explores the module's compile classpath with read-only tools that show the public API of every class on it, but never method bodies. That is how `cli` uses Clikt, a real third-party library from Maven Central: the model looks up Clikt's commands, arguments and errors in the jars, as it does for the classes of `lexer` or `parser`.
 
@@ -58,16 +58,16 @@ Before the code is written, fixed rules check every answer from the model:
 - `cli` includes `Main.kt`, because the `application` plugin needs the class name
 - every test file has a `@Test`
 
-When an answer breaks a rule, grAIdle asks again with the problems listed.
+When an answer breaks a rule, runAi asks again with the problems listed.
 
-The model does not guess. When a module's spec clearly contradicts the spec of a dependency, or leaves open a decision that changes what the API does, it reports that, quoting the specs word for word. grAIdle checks that the quotes are real. Then it stops the task, and asks you to resolve the points in the specs. Each point links to the line in the spec file.
+The model does not guess. When a module's spec clearly contradicts the spec of a dependency, or leaves open a decision that changes what the API does, it reports that, quoting the specs word for word. runAi checks that the quotes are real. Then it stops the task, and asks you to resolve the points in the specs. Each point links to the line in the spec file.
 
 ## 1. Prerequisites
 
 - **JDK 17.** Gradle downloads one if it finds none.
 - **A Claude API key.** Use either:
   - the `ANTHROPIC_API_KEY` environment variable, for terminal builds
-  - `graidle.apiKey=...` in `~/.gradle/gradle.properties`, for builds from an IDE
+  - `runAi.apiKey=...` in `~/.gradle/gradle.properties`, for builds from an IDE
 
 All commands run in this directory (`samples/calculator-cli`).
 
@@ -77,7 +77,7 @@ All commands run in this directory (`samples/calculator-cli`).
 ./gradlew generateFromSpec
 ```
 
-This makes 12 model requests with `claude-haiku-5-5`, the default: code and tests for six modules. Tool calls add turns to a request. Generation runs from the bottom up, because each module compiles against the modules it depends on. The results are in `<module>/graidle/main/kotlin` and `<module>/graidle/test/kotlin`, with a `.lock` file next to each. The transcripts are in `<module>/build/graidle/transcripts/`.
+This makes 12 model requests with `claude-haiku-5-5`, the default: code and tests for six modules. Tool calls add turns to a request. Generation runs from the bottom up, because each module compiles against the modules it depends on. The results are in `<module>/runAi/main/kotlin` and `<module>/runAi/test/kotlin`, with a `.lock` file next to each. The transcripts are in `<module>/build/runAi/transcripts/`.
 
 ## 3. Build, test and run
 
@@ -97,13 +97,13 @@ cli/build/install/calc/bin/calc 2 ^ 3 ^ 2
 
 ## 4. Review and commit
 
-Read the generated code and tests like any other change, then commit the `graidle/` directory of each module, including the `.lock` files.
+Read the generated code and tests like any other change, then commit the `runAi/` directory of each module, including the `.lock` files.
 
-In this repository, `.gitignore` excludes the samples' `graidle/` folders, so your demo runs are not committed here. In your own project, commit them.
+In this repository, `.gitignore` excludes the samples' `runAi/` folders, so your demo runs are not committed here. In your own project, commit them.
 
 ## 5. Build like CI
 
-On CI, grAIdle uses the committed results, needs no API key, and never calls the model:
+On CI, runAi uses the committed results, needs no API key, and never calls the model:
 
 ```bash
 env -u ANTHROPIC_API_KEY CI=true ./gradlew build
@@ -111,7 +111,7 @@ env -u ANTHROPIC_API_KEY CI=true ./gradlew build
 
 ## When the generated code is wrong
 
-grAIdle does not yet see compiler errors or test failures, so it cannot send them back to the model. When `compileKotlin` or `test` fails:
+runAi does not yet see compiler errors or test failures, so it cannot send them back to the model. When `compileKotlin` or `test` fails:
 
 1. **Read the failure.** A failing test names the rule it checks. Decide whether the code or the test is wrong, or whether the spec is unclear.
 2. **Fix the cause:**
@@ -122,7 +122,7 @@ grAIdle does not yet see compiler errors or test failures, so it cannot send the
      ./gradlew :parser:generateKotlinFromSpec --regenerate
      ```
 
-   - Or fix the committed code by hand. grAIdle keeps a hand edit as long as it follows the rules above.
+   - Or fix the committed code by hand. runAi keeps a hand edit as long as it follows the rules above.
 
 ## Things to try
 

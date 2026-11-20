@@ -5,10 +5,10 @@ Builds a syntax tree from the tokens of an arithmetic expression.
 ## API
 
 ```kotlin
-package dev.graidle.demo.calc.parser
+package dev.runai.demo.calc.parser
 
-import dev.graidle.demo.calc.ast.Expr
-import dev.graidle.demo.calc.lexer.Token
+import dev.runai.demo.calc.ast.Expr
+import dev.runai.demo.calc.lexer.Token
 
 class ParseException(message: String, val position: Int) : Exception(message)
 
