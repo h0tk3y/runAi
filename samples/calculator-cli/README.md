@@ -97,6 +97,8 @@ cli/build/install/calc/bin/calc 2 ^ 3 ^ 2
 
 Read the generated code and tests like any other change, then commit the `graidle/` directory of each module, including the `.lock` files.
 
+In this repository, `.gitignore` excludes the samples' `graidle/` folders, so your demo runs are not committed here. In your own project, commit them.
+
 ## 5. Build like CI
 
 On CI, grAIdle uses the committed results, needs no API key, and never calls the model:

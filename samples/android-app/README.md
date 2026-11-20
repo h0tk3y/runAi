@@ -80,6 +80,8 @@ To see what the model was asked and what it answered, open `app/build/graidle/tr
 
 3. Commit `app/graidle/`, including the `.lock` files.
 
+In this repository, `.gitignore` excludes the samples' `graidle/` folders, so your demo runs are not committed here. In your own project, commit them.
+
 ## 5. Build like CI
 
 On CI, grAIdle runs in `replay` mode: it uses the committed results, needs no API key, and never calls the model. It detects CI from `CI`, `JENKINS_URL`, `TEAMCITY_VERSION`, `TF_BUILD` or `CODEBUILD_BUILD_ID`. On other CI servers, add `-Pgraidle.mode=replay`.
