@@ -1,5 +1,0 @@
-# grAIdle lock for :parser:generateKotlinFromSpec. Commit this file together with the result.
-# The fingerprint covers every input that the model saw.
-fingerprint=5f037f5b2fa1927fb15c4766f79f4b321adacc5b5eec2fddc5cdab147a6faa77
-model=claude-opus-5-5
-promptVersion=system-1/spec-code-3

@@ -1,5 +1,0 @@
-# grAIdle lock for :app:translateStringsJa. Commit this file together with the result.
-# The fingerprint covers every input that the model saw.
-fingerprint=9f00ac40bd6d58f05a3bc8770db0c0571acc67853fef97f43852e160c5e97325
-model=claude-haiku-5-5
-promptVersion=system-1/translate-1
