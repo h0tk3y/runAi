@@ -1,0 +1,5 @@
+# Line endings for the Gradle wrapper scripts, as `gradle init` sets them.
+/gradlew text eol=lf
+**/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary

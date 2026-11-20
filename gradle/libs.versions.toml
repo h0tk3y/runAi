@@ -1,0 +1,14 @@
+[versions]
+anthropic = "3.11.0"
+agp = "9.5.1"
+junit = "6.1.3"
+assertj = "3.27.7"
+jackson = "2.19.4"
+kotlin = "2.4.21"
+
+[libraries]
+anthropic-java = { module = "com.anthropic:anthropic-java", version.ref = "anthropic" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+android-gradle-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp" }
+android-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }

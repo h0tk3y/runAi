@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name" translatable="false">Notely</string>
+
+    <string name="greeting">Welcome back, %1$s!</string>
+    <string name="last_synced">Last synced <xliff:g id="minutes" example="5">%1$d</xliff:g> min ago</string>
+    <string name="storage_used">%1$.1f%% of your storage is used</string>
+    <string name="empty_state">You don\'t have any notes yet. Tap <b>New note</b> to start.</string>
+    <string name="confirm_delete">Delete this note? You can\'t undo this.</string>
+    <string name="action_share">Share</string>
+    <string name="action_delete">Delete</string>
+
+    <plurals name="notes_count">
+        <item quantity="one">%d note</item>
+        <item quantity="other">%d notes</item>
+    </plurals>
+</resources>
