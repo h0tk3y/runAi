@@ -7,8 +7,9 @@ import java.io.File
 
 /**
  * Helpers for tasks whose answer is a set of text files. The answer has the form
- * `{"status": "ok", "reason": "", "files": [{"path": "...", "content": "...", "keep": false}]}`. With `"keep": true`, a
- * file keeps its content from the previous result, byte for byte, and its `content` is ignored.
+ * `{"status": "ok", "reason": "", "files": [{"path": "...", "content": "...", "keep": false}]}`. `keep` is only in the
+ * schema when there is a previous result: with `"keep": true`, a file keeps its content from the previous result, byte
+ * for byte, and its `content` is ignored.
  *
  * The model never writes files: the task checks the answer and writes the files itself, so it can enforce which paths
  * are allowed.
@@ -22,12 +23,14 @@ object FileAnswers {
     /**
      * The JSON schema of the answer. With [allowedPaths], the schema allows only those paths. [extraStatuses] adds
      * values for `status`, and [extraProperties] adds required top-level properties, each given as a JSON schema.
-     * Tasks that add them read those parts of the answer themselves.
+     * Tasks that add them read those parts of the answer themselves. [withKeep] adds the `keep` flag; pass true only
+     * when the prompt shows a previous result, so the model is never asked about a flag it cannot use.
      */
     fun schema(
         allowedPaths: List<String>? = null,
         extraStatuses: List<String> = emptyList(),
         extraProperties: Map<String, String> = emptyMap(),
+        withKeep: Boolean = false,
     ): String {
         val root = mapper.createObjectNode().put("type", "object")
         val properties = root.putObject("properties")
@@ -39,8 +42,8 @@ object FileAnswers {
         val path = itemProperties.putObject("path").put("type", "string")
         if (allowedPaths != null) path.putArray("enum").apply { allowedPaths.forEach { add(it) } }
         itemProperties.putObject("content").put("type", "string")
-        itemProperties.putObject("keep").put("type", "boolean")
-        item.putArray("required").add("path").add("content").add("keep")
+        if (withKeep) itemProperties.putObject("keep").put("type", "boolean")
+        item.putArray("required").add("path").add("content").apply { if (withKeep) add("keep") }
         item.put("additionalProperties", false)
         extraProperties.forEach { (name, schema) -> properties.set<JsonNode>(name, mapper.readTree(schema)) }
         root.putArray("required").add("status").add("reason").add("files").apply { extraProperties.keys.forEach { add(it) } }
@@ -67,10 +70,17 @@ object FileAnswers {
         for (node in root.path("files")) {
             val path = node.path("path").asText()
             val keep = node.path("keep").asBoolean(false)
-            val content = if (keep) previous[path] else node.path("content").asText()
+            val written = node.path("content").asText()
+            // A kept file without a previous version still counts when the answer has its content.
+            val content = when {
+                !keep -> written
+                path in previous -> previous[path]
+                written.isNotBlank() -> written
+                else -> null
+            }
             when {
                 !isSafeRelativePath(path) -> problems += "'$path' is not a relative path with '/' separators"
-                content == null -> problems += "'$path' has \"keep\" set, but the previous result has no such file"
+                content == null -> problems += "'$path' has \"keep\" set, but the previous result has no such file. Give its content."
                 files.put(path, content) != null -> problems += "'$path' appears more than once"
                 content.isBlank() -> problems += "'$path' is empty"
             }

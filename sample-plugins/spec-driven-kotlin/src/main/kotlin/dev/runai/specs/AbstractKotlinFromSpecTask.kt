@@ -96,7 +96,11 @@ abstract class AbstractKotlinFromSpecTask : AbstractRunAi() {
     final override fun generate(runner: StructuredRunner, outputDir: File) {
         val own = ownSpec()
         val dependencies = dependencySpecs()
-        val schema = FileAnswers.schema(extraStatuses = SpecIssueReports.STATUSES, extraProperties = SpecIssueReports.SCHEMAS)
+        val schema = FileAnswers.schema(
+            extraStatuses = SpecIssueReports.STATUSES,
+            extraProperties = SpecIssueReports.SCHEMAS,
+            withKeep = previousResult() != null,
+        )
         val files = runner.run(
             label = path,
             request = request(SystemPrompt.TEXT, renderPrompt(own, dependencies), schema)

@@ -131,7 +131,8 @@ class RunAiFunctionalTest {
         run("summarizeDocs", "-PrunAi.mode=live")
 
         assertThat(server.requests).hasSize(2)
-        assertThat(server.requests[0].body).doesNotContain("Previous result")
+        assertThat(server.requests[0].body).doesNotContain("Previous result", "\"keep\"")
+        assertThat(server.requests[1].body).contains("\"keep\":{\"type\":\"boolean\"}")
         assertThat(server.requests[1].body).contains(
             "The task generated a result before, shown below. It must be generated again, because its inputs changed",
             "Keep every part of it that the changes do not affect exactly as it is",

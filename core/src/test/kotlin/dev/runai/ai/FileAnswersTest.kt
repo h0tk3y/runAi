@@ -17,12 +17,14 @@ class FileAnswersTest {
     }
 
     @Test
-    fun `keeping a file that has no previous version is a problem`() {
-        val answer = """{"status":"ok","reason":"","files":[{"path":"a.md","content":"","keep":true}]}"""
+    fun `keeping a file that has no previous version is a problem, unless the answer has its content`() {
+        val empty = """{"status":"ok","reason":"","files":[{"path":"a.md","content":"","keep":true}]}"""
+        val withContent = """{"status":"ok","reason":"","files":[{"path":"a.md","content":"new","keep":true}]}"""
 
-        assertThat(FileAnswers.parse(answer)).isEqualTo(
-            Validation.Invalid(listOf("'a.md' has \"keep\" set, but the previous result has no such file"))
+        assertThat(FileAnswers.parse(empty)).isEqualTo(
+            Validation.Invalid(listOf("'a.md' has \"keep\" set, but the previous result has no such file. Give its content."))
         )
+        assertThat(FileAnswers.parse(withContent)).isEqualTo(Validation.Valid(mapOf("a.md" to "new")))
     }
 
     @Test
@@ -32,8 +34,13 @@ class FileAnswersTest {
     }
 
     @Test
-    fun `the schema requires keep and can add statuses and properties`() {
-        val schema = FileAnswers.schema(extraStatuses = listOf("unclear"), extraProperties = mapOf("notes" to """{"type":"string"}"""))
+    fun `the schema has keep only with a previous result, and can add statuses and properties`() {
+        assertThat(FileAnswers.schema()).doesNotContain("keep").contains(""""required":["path","content"]""")
+        val schema = FileAnswers.schema(
+            extraStatuses = listOf("unclear"),
+            extraProperties = mapOf("notes" to """{"type":"string"}"""),
+            withKeep = true,
+        )
 
         assertThat(schema).contains(
             """"keep":{"type":"boolean"}""",

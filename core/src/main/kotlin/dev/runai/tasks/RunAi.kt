@@ -101,7 +101,7 @@ abstract class RunAi : AbstractRunAi() {
         val declared = declaredOutputs()
         val files = runner.run(
             label = path,
-            request = request(SystemPrompt.TEXT, renderPrompt(declared), FileAnswers.schema(declared)),
+            request = request(SystemPrompt.TEXT, renderPrompt(declared), FileAnswers.schema(declared, withKeep = previousResult() != null)),
             maxAttempts = maxAttempts.get(),
         ) { answer -> checkAnswer(answer, declared) }
         FileAnswers.write(files, outputDir)
