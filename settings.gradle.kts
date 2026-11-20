@@ -27,7 +27,8 @@ rootProject.name = "runAi"
 
 // The general-purpose plugin: AI tasks, modes, lock files. No Android or other domain code.
 include(":core")
-// Translates Android string resources. Built on :core, as other plugins can be.
-include(":android-string-translations")
-// Generates Kotlin code and tests from Markdown specs, and publishes specs as a variant. Built on :core.
-include(":spec-driven-kotlin")
+// Sample plugins built on :core, as other plugins can be:
+// - android-string-translations translates Android string resources.
+// - spec-driven-kotlin generates Kotlin code and tests from Markdown specs, and publishes specs as a variant.
+include(":sample-plugins:android-string-translations")
+include(":sample-plugins:spec-driven-kotlin")

@@ -74,7 +74,7 @@ A plugin depends on the `dev.runai` plugin's artifact, applies `dev.runai`, and 
 - `verify(outputDir)`: checks a committed result with fixed rules, and returns the problems.
 - `generate(runner, outputDir)`: asks the model through `runner`, which checks the answers and retries, then writes the result.
 
-The base class handles everything else: the lock file, the modes, staging (a failed run keeps the committed result), the transcript and the shared settings. For answers that are a set of text files, `FileAnswers` gives the schema, the parsing and the path checks. See `android-string-translations` and `spec-driven-kotlin` for complete examples.
+The base class handles everything else: the lock file, the modes, staging (a failed run keeps the committed result), the transcript and the shared settings. For answers that are a set of text files, `FileAnswers` gives the schema, the parsing and the path checks. See the sample plugins in `sample-plugins/android-string-translations` and `sample-plugins/spec-driven-kotlin` for complete examples.
 
 ## Shared settings
 
@@ -231,8 +231,8 @@ The demo in [samples/calculator-cli](samples/calculator-cli/README.md) builds a 
 ```
 
 - `core`: unit tests for fingerprints, lock files and the retry loop. TestKit tests for `RunAi` run against a local fake of the Messages API, so they make no real model calls.
-- `android-string-translations`: unit tests for parsing, checks and prompts. TestKit tests cover the modes, out-of-date detection, hand edits, failed generation, configuration-cache reuse, downstream tasks and the request format. `AndroidFunctionalTest` builds a small app with AGP, so aapt2 compiles the translations. It is skipped when no Android SDK is found.
-- `spec-driven-kotlin`: unit tests for spec parsing and the source checks. TestKit tests build two Kotlin modules with the real Kotlin Gradle plugin: generation, the spec variant across modules, replay from a fresh clone, out-of-date detection, and retries.
+- `sample-plugins/android-string-translations`: unit tests for parsing, checks and prompts. TestKit tests cover the modes, out-of-date detection, hand edits, failed generation, configuration-cache reuse, downstream tasks and the request format. `AndroidFunctionalTest` builds a small app with AGP, so aapt2 compiles the translations. It is skipped when no Android SDK is found.
+- `sample-plugins/spec-driven-kotlin`: unit tests for spec parsing and the source checks. TestKit tests build two Kotlin modules with the real Kotlin Gradle plugin: generation, the spec variant across modules, replay from a fresh clone, out-of-date detection, and retries.
 - `build-logic`: the convention plugin the plugin modules share.
 - `samples/android-app` and `samples/calculator-cli`: demos that use the plugins from this repository. They call the real Claude API; see their READMEs.
 
