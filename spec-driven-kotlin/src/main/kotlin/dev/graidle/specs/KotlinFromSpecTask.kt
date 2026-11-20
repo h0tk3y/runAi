@@ -43,6 +43,6 @@ abstract class KotlinFromSpecTask : AbstractKotlinFromSpecTask() {
 
     private companion object {
         /** Change when the prompt text or the checks change. */
-        const val PROMPT_VERSION = 3
+        const val PROMPT_VERSION = 4
     }
 }

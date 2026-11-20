@@ -59,6 +59,7 @@ class StructuredRunner(
                     },
                     prompt = prompt,
                     response = response.text,
+                    toolCalls = response.toolCalls,
                 )
             )
             when (result) {

@@ -65,7 +65,8 @@ class GraidlePlugin : Plugin<Project> {
 
     companion object {
         const val EXTENSION_NAME = "graidle"
-        const val DEFAULT_MODEL = "claude-opus-5-5"
+        /** Small, fast and cheap: enough for narrow tasks. Projects that need more set `graidle.model`. */
+        const val DEFAULT_MODEL = "claude-haiku-5-5"
 
         /**
          * Environment variables that CI servers set. Most set `CI`; Jenkins, TeamCity, Azure Pipelines and

@@ -21,7 +21,15 @@ class TranslationPrompt(
 
     val targetLanguageTag: String = qualifierToLanguageTag(targetQualifier)
 
-    fun render(chunk: List<StringResource>): String = buildString {
+    /**
+     * The prompt for [chunk]. With [previous] translations from the committed result, the model keeps each one that
+     * still translates its current source; [previousReason] says why the task runs again.
+     */
+    fun render(
+        chunk: List<StringResource>,
+        previous: Map<String, StringResource> = emptyMap(),
+        previousReason: String? = null,
+    ): String = buildString {
         val sourceName = displayName(sourceLanguage)
         val targetName = displayName(targetLanguageTag)
         append("Task: Translate Android string resources from $sourceName ($sourceLanguage) to $targetName ")
@@ -52,6 +60,19 @@ class TranslationPrompt(
         append("\nInput:\n")
         append(canonicalInput(chunk))
         append('\n')
+        val kept = chunk.mapNotNull { previous[it.name] }
+        if (kept.isNotEmpty()) {
+            append("\nThe task translated these resources before. They must be translated again, because ")
+            append(previousReason ?: "the inputs changed").append('\n')
+            append(
+                "Keep each previous translation exactly as it is if it still translates the current source text " +
+                    "correctly. Translate again only the items whose source text changed, and the items that have no " +
+                    "previous translation.\n"
+            )
+            append("\nPrevious translations:\n")
+            append(canonicalInput(kept))
+            append('\n')
+        }
     }
 
     /** The resources as the model sees them, in a stable JSON form. Also used for the fingerprint. */
@@ -141,7 +162,7 @@ class TranslationPrompt(
 
     companion object {
         /** Change when the prompt text, the schema or the checks change. */
-        const val VERSION = 1
+        const val VERSION = 2
 
         private val mapper = ObjectMapper()
 

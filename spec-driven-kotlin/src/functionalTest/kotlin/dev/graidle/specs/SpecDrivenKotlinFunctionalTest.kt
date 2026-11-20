@@ -162,8 +162,10 @@ class SpecDrivenKotlinFunctionalTest {
         server.answerWhen(TESTS, "Module: :app", answers = listOf(appTests))
     }
 
-    private fun requestFor(kind: String, module: String) =
-        server.requests.single { kind in it.body && "Module: $module" in it.body }.body
+    private fun requestFor(kind: String, module: String) = requestsFor(kind, module).single()
+
+    private fun requestsFor(kind: String, module: String) =
+        server.requests.filter { kind in it.body && "Module: $module" in it.body }.map { it.body }
 
     @Test
     fun `generates code and tests from the specs, and builds and tests them`() {
@@ -213,8 +215,14 @@ class SpecDrivenKotlinFunctionalTest {
         greetingCodeFile.appendText("\n// Reviewed.\n")
         run(":app:generateKotlinFromSpec", "-Pgraidle.mode=replay")
 
-        // A change in the specification of :greeting makes :app out of date.
+        // A change in the specification of :greeting makes :app out of date, even when the code of :greeting
+        // stays the same. :app compiles against :greeting, so :greeting is brought up to date first.
         greetingSpec.appendText("\n2. A blank name gives \"Hello!\".\n")
+        server.answerWhen(
+            CODE, "Module: :greeting",
+            answers = listOf("""{"status":"ok","reason":"","files":[{"path":"demo/greeting/Greeting.kt","content":"","keep":true}]}"""),
+        )
+        run(":greeting:generateKotlinFromSpec", "-Pgraidle.mode=live")
         val build = runAndFail(":app:generateKotlinFromSpec", "-Pgraidle.mode=replay")
 
         assertThat(build.output).contains("grAIdle cannot use the committed result of ':app:generateKotlinFromSpec': the inputs changed since")
@@ -260,6 +268,8 @@ class SpecDrivenKotlinFunctionalTest {
             ),
         )
 
+        // :app compiles against :greeting, so :greeting is generated first.
+        server.answerWhen(CODE, "Module: :greeting", answers = listOf(greetingCode))
         val build = runAndFail(":app:generateKotlinFromSpec", "-Pgraidle.mode=live")
 
         val greetingSpecUri = projectDir.resolve("greeting/src/main/spec/greeting.md").canonicalFile.toPath().toUri()
@@ -274,8 +284,8 @@ class SpecDrivenKotlinFunctionalTest {
             "   Why they conflict: greet always starts with",
         )
         // Not retried: a person must decide. Nothing is written.
-        assertThat(server.requests).hasSize(1)
-        assertThat(server.requests.single().body).contains("If they clearly contradict each other, do not choose one of them")
+        assertThat(requestsFor(CODE, ":app")).hasSize(1)
+        assertThat(requestFor(CODE, ":app")).contains("If they clearly contradict each other, do not choose one of them")
         assertThat(projectDir.resolve("app/graidle/main/kotlin.lock")).doesNotExist()
         assertThat(projectDir.resolve("app/graidle/main/kotlin").walk().filter { it.isFile }.toList()).isEmpty()
     }
@@ -292,6 +302,8 @@ class SpecDrivenKotlinFunctionalTest {
             ),
         )
 
+        // The tests compile against the module's own code, so the code is generated first.
+        server.answerWhen(CODE, "Module: :greeting", answers = listOf(greetingCode))
         val build = runAndFail(":greeting:generateTestsFromSpec", "-Pgraidle.mode=live")
 
         val greetingSpecUri = greetingSpec.canonicalFile.toPath().toUri()
@@ -301,8 +313,8 @@ class SpecDrivenKotlinFunctionalTest {
             "   :greeting at $greetingSpecUri:13:4\n",
             "   Question: What does greet return for a blank name?",
         )
-        assertThat(server.requests).hasSize(1)
-        assertThat(server.requests.single().body).contains("If the specifications leave open a decision that changes what the public API does")
+        assertThat(requestsFor(TESTS, ":greeting")).hasSize(1)
+        assertThat(requestFor(TESTS, ":greeting")).contains("If the specifications leave open a decision that changes what the public API does")
         assertThat(projectDir.resolve("greeting/graidle/test/kotlin.lock")).doesNotExist()
     }
 
@@ -313,13 +325,76 @@ class SpecDrivenKotlinFunctionalTest {
             "dependencyQuote":"greet returns \"Good morning\" for every name",
             "ownQuote":"`welcomeAll` greets every name with `greet` from the greeting module, in order.",
             "explanation":"They disagree."}]}"""
+        // :app compiles against :greeting, so :greeting is generated first.
+        server.answerWhen(CODE, "Module: :greeting", answers = listOf(greetingCode))
         server.answerWhen(CODE, "Module: :app", answers = listOf(misquoted, appCode))
 
         val build = run(":app:generateKotlinFromSpec", "-Pgraidle.mode=live")
 
         assertThat(build.task(":app:generateKotlinFromSpec")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
-        assertThat(server.requests).hasSize(2)
-        assertThat(server.requests[1].body).contains("does not appear in the specification of :greeting. Quote it word for word.")
+        assertThat(requestsFor(CODE, ":app")).hasSize(2)
+        assertThat(requestsFor(CODE, ":app")[1]).contains("does not appear in the specification of :greeting. Quote it word for word.")
+    }
+
+    @Test
+    fun `looks up library and module APIs on the compile classpath with tools`() {
+        // A real third-party library from Maven Central, next to the project module.
+        projectDir.resolve("app/build.gradle.kts").let {
+            it.writeText(it.readText().replace("implementation(project(\":greeting\"))",
+                "implementation(project(\":greeting\"))\n    implementation(\"org.apache.commons:commons-lang3:3.22.0\")"))
+        }
+        val appCodeWithLibrary = files(
+            "demo/app/App.kt" to """
+                package demo.app
+
+                import demo.greeting.greet
+                import org.apache.commons.lang3.StringUtils
+
+                fun welcomeAll(names: List<String>): List<String> = names.map { greet(StringUtils.capitalize(it)) }
+            """.trimIndent()
+        )
+        server.answerWhen(CODE, "Module: :greeting", answers = listOf(greetingCode))
+        server.answerWhen(
+            CODE, "Module: :app",
+            answers = listOf(
+                FakeClaudeServer.toolUse("describe_class", """{"name":"org.apache.commons.lang3.StringUtils"}"""),
+                FakeClaudeServer.toolUse("describe_class", """{"name":"demo.greeting.GreetingKt"}"""),
+                appCodeWithLibrary,
+            ),
+        )
+
+        val build = run(":app:generateKotlinFromSpec", "-Pgraidle.mode=live")
+
+        assertThat(build.task(":app:generateKotlinFromSpec")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+        val appRequests = requestsFor(CODE, ":app")
+        assertThat(appRequests).hasSize(3)
+        assertThat(appRequests[0]).contains("\"name\":\"describe_class\"", "\"name\":\"search_classpath\"")
+        // Each tool result goes back to the model: the library's API, then the module's.
+        assertThat(appRequests[1]).contains("\"tool_result\"", "public static capitalize(java.lang.String): java.lang.String")
+        assertThat(appRequests[2]).contains("public static final greet(java.lang.String): java.lang.String")
+        assertThat(projectDir.resolve("app/graidle/main/kotlin/demo/app/App.kt").readText()).contains("StringUtils.capitalize")
+        assertThat(projectDir.resolve("app/build/graidle/transcripts/generateKotlinFromSpec.json").readText())
+            .contains("\"toolCalls\"", "describe_class")
+    }
+
+    @Test
+    fun `regenerating shows the previous code, and a kept file stays as it was`() {
+        server.answerWhen(CODE, "Module: :greeting", answers = listOf(greetingCode))
+        run(":greeting:generateKotlinFromSpec", "-Pgraidle.mode=live")
+        val codeFile = projectDir.resolve("greeting/graidle/main/kotlin/demo/greeting/Greeting.kt")
+        val committed = codeFile.readText()
+        greetingSpec.appendText("\nThe greeting is used on the start screen.\n")
+        server.answerWhen(
+            CODE, "Module: :greeting",
+            answers = listOf("""{"status":"ok","reason":"","files":[{"path":"demo/greeting/Greeting.kt","content":"","keep":true}]}"""),
+        )
+
+        run(":greeting:generateKotlinFromSpec", "-Pgraidle.mode=live")
+
+        val requests = requestsFor(CODE, ":greeting")
+        assertThat(requests).hasSize(2)
+        assertThat(requests[1]).contains("It must be generated again, because its inputs changed", "Previous result:", "fun greet(name: String): String = ")
+        assertThat(codeFile.readText()).isEqualTo(committed)
     }
 
     @Test

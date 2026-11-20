@@ -129,7 +129,7 @@ class TranslateStringsFunctionalTest {
             """<string name="welcome">Willkommen bei <b>Demo</b></string>""",
             """<item quantity="other">%d Dateien</item>""",
         ).doesNotContain("app_name")
-        assertThat(lock.readText()).containsPattern("fingerprint=[0-9a-f]{64}").contains("model=claude-opus-5-5")
+        assertThat(lock.readText()).containsPattern("fingerprint=[0-9a-f]{64}").contains("model=claude-haiku-5-5")
         assertThat(projectDir.resolve("build/graidle/transcripts/translateStringsDe.json")).exists()
         assertThat(server.requests).hasSize(1)
     }
@@ -232,20 +232,37 @@ class TranslateStringsFunctionalTest {
         assertThat(server.requests).hasSize(2)
         assertThat(server.requests[1].body).contains("Use formal German.")
         assertThat(lock.readText()).isNotEqualTo(oldLock)
+        // The previous translations come with the request, so the model keeps those that still fit.
+        assertThat(server.requests[0].body).doesNotContain("Previous translations")
+        assertThat(server.requests[1].body).contains(
+            "The task translated these resources before. They must be translated again, because its inputs changed",
+            "Keep each previous translation exactly as it is if it still translates the current source text correctly.",
+            "Previous translations:",
+            "Hallo, %1${'$'}s!",
+        )
     }
 
     @Test
-    fun `sends a structured output request with the declared model`() {
+    fun `sends a structured output request with the default model, Haiku, and no refusal fallback`() {
         generate()
 
         val request = server.requests.single()
         assertThat(request.body).contains(
-            "\"model\":\"claude-opus-5-5\"",
+            "\"model\":\"claude-haiku-5-5\"",
             "\"output_config\"",
             "\"effort\":\"medium\"",
             "\"json_schema\"",
-            "\"fallbacks\":\"default\"",
-        )
+        ).doesNotContain("\"fallbacks\"")
+        assertThat(request.betaHeader).isNull()
+    }
+
+    @Test
+    fun `asks for a refusal fallback on models that have one`() {
+        projectDir.resolve("build.gradle.kts").appendText("\ngraidle { model = \"claude-opus-5-5\" }\n")
+        generate()
+
+        val request = server.requests.single()
+        assertThat(request.body).contains("\"model\":\"claude-opus-5-5\"", "\"fallbacks\":\"default\"")
         assertThat(request.betaHeader).contains("server-side-fallback-2026-07-01")
     }
 

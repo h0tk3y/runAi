@@ -20,6 +20,7 @@ class Transcript(private val task: String) {
         val problems: List<String>,
         val prompt: String,
         val response: String,
+        val toolCalls: List<AiToolCall> = emptyList(),
     )
 
     private val entries: MutableList<Entry> = Collections.synchronizedList(mutableListOf())
@@ -48,6 +49,12 @@ class Transcript(private val task: String) {
                 put("durationMs", e.durationMs)
                 putArray("problems").apply { e.problems.forEach { add(it) } }
                 put("prompt", e.prompt)
+                putArray("toolCalls").apply {
+                    e.toolCalls.forEach { call ->
+                        addObject().put("name", call.name).put("input", call.input).put("isError", call.isError)
+                            .put("output", call.output.take(TOOL_OUTPUT_LIMIT))
+                    }
+                }
                 put("response", e.response)
             }
         }
@@ -56,6 +63,9 @@ class Transcript(private val task: String) {
     }
 
     private companion object {
+        /** Tool results can be long; the transcript keeps the start of each. */
+        const val TOOL_OUTPUT_LIMIT = 2_000
+
         val mapper: ObjectMapper = ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
     }
 }

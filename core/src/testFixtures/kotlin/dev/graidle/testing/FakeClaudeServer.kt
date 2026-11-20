@@ -30,7 +30,7 @@ class FakeClaudeServer : AutoCloseable {
             val (status, json) = if (answer == null) {
                 400 to """{"type":"error","error":{"type":"invalid_request_error","message":"no fake answer queued"}}"""
             } else {
-                200 to message(answer)
+                200 to if (answer.startsWith(TOOL_USE)) toolUseMessage(answer.removePrefix(TOOL_USE)) else message(answer)
             }
             val bytes = json.toByteArray()
             exchange.responseHeaders.add("Content-Type", "application/json")
@@ -51,6 +51,27 @@ class FakeClaudeServer : AutoCloseable {
 
     override fun close() {
         server.stop(0)
+    }
+
+    companion object {
+        private const val TOOL_USE = "\u0000tool_use:"
+
+        /** An answer that calls the tool [name] with [inputJson], instead of a final answer. */
+        fun toolUse(name: String, inputJson: String): String = "$TOOL_USE$name|$inputJson"
+    }
+
+    private var toolUseIds = 0
+
+    /** An assistant turn that calls one tool. [spec] is "name|input JSON". */
+    private fun toolUseMessage(spec: String): String {
+        val name = spec.substringBefore('|')
+        val input = spec.substringAfter('|')
+        return """
+            {"id":"msg_fake","type":"message","role":"assistant","model":"claude-opus-5-5",
+             "content":[{"type":"tool_use","id":"toolu_${++toolUseIds}","name":${jsonString(name)},"input":$input}],
+             "stop_reason":"tool_use","stop_sequence":null,
+             "usage":{"input_tokens":120,"output_tokens":40}}
+        """.trimIndent()
     }
 
     private fun message(text: String) = """

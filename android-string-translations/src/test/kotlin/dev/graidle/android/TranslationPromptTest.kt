@@ -23,6 +23,22 @@ class TranslationPromptTest {
     }
 
     @Test
+    fun `shows previous translations of the chunk only`() {
+        val previous = mapOf(
+            "greeting" to StringEntry("greeting", "Olá, %1\$s!"),
+            "unrelated" to StringEntry("unrelated", "Outro"),
+        )
+
+        val text = prompt.render(chunk, previous, "its inputs changed")
+
+        assertThat(text).contains(
+            "They must be translated again, because its inputs changed",
+            "Previous translations:\n{\"strings\":[{\"name\":\"greeting\",\"value\":\"Olá, %1\$s!\"}],\"plurals\":[]}",
+        ).doesNotContain("Outro")
+        assertThat(prompt.render(chunk)).doesNotContain("Previous translations")
+    }
+
+    @Test
     fun `accepts a complete answer and writes plurals in CLDR order`() {
         val answer = """
             {"status":"ok","reason":"","strings":[{"name":"greeting","value":"Olá, %1${'$'}s!"}],

@@ -18,7 +18,7 @@ fun tokenize(input: String): List<Token>
 
 ## Behavior
 
-1. Whitespace are not part of any token and can only appear as separators between tokens.
+1. Whitespace separates tokens, and can also come before the first token or after the last one. It is not part of any token.
 2. A number is one or more digits, optionally followed by `.` and one or more digits: `3`, `42`, `0.5`. Its type is `NUMBER`, and its text is the digits as written.
 3. `+`, `-`, `*`, `/`, `^`, `(` and `)` are one-character tokens of type `PLUS`, `MINUS`, `TIMES`, `DIVIDE`, `POWER`, `LEFT_PAREN` and `RIGHT_PAREN`.
 4. `position` is the zero-based index of the first character of the token in the input.

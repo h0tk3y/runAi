@@ -7,7 +7,8 @@ import java.io.File
 
 /**
  * Helpers for tasks whose answer is a set of text files. The answer has the form
- * `{"status": "ok", "reason": "", "files": [{"path": "...", "content": "..."}]}`.
+ * `{"status": "ok", "reason": "", "files": [{"path": "...", "content": "...", "keep": false}]}`. With `"keep": true`, a
+ * file keeps its content from the previous result, byte for byte, and its `content` is ignored.
  *
  * The model never writes files: the task checks the answer and writes the files itself, so it can enforce which paths
  * are allowed.
@@ -38,7 +39,8 @@ object FileAnswers {
         val path = itemProperties.putObject("path").put("type", "string")
         if (allowedPaths != null) path.putArray("enum").apply { allowedPaths.forEach { add(it) } }
         itemProperties.putObject("content").put("type", "string")
-        item.putArray("required").add("path").add("content")
+        itemProperties.putObject("keep").put("type", "boolean")
+        item.putArray("required").add("path").add("content").add("keep")
         item.put("additionalProperties", false)
         extraProperties.forEach { (name, schema) -> properties.set<JsonNode>(name, mapper.readTree(schema)) }
         root.putArray("required").add("status").add("reason").add("files").apply { extraProperties.keys.forEach { add(it) } }
@@ -47,10 +49,11 @@ object FileAnswers {
     }
 
     /**
-     * Parses an answer into path-to-content pairs, in answer order. Reports invalid JSON, unsafe or repeated paths,
-     * and empty files. Callers add their own rules for which paths are expected.
+     * Parses an answer into path-to-content pairs, in answer order. A file with `"keep": true` gets its content from
+     * [previous]. Reports invalid JSON, unsafe or repeated paths, empty files, and files kept without a previous
+     * version. Callers add their own rules for which paths are expected.
      */
-    fun parse(answer: String): Validation<Map<String, String>> {
+    fun parse(answer: String, previous: Map<String, String> = emptyMap()): Validation<Map<String, String>> {
         val root = try {
             mapper.readTree(answer)
         } catch (e: JsonProcessingException) {
@@ -63,9 +66,11 @@ object FileAnswers {
         val files = linkedMapOf<String, String>()
         for (node in root.path("files")) {
             val path = node.path("path").asText()
-            val content = node.path("content").asText()
+            val keep = node.path("keep").asBoolean(false)
+            val content = if (keep) previous[path] else node.path("content").asText()
             when {
                 !isSafeRelativePath(path) -> problems += "'$path' is not a relative path with '/' separators"
+                content == null -> problems += "'$path' has \"keep\" set, but the previous result has no such file"
                 files.put(path, content) != null -> problems += "'$path' appears more than once"
                 content.isBlank() -> problems += "'$path' is empty"
             }

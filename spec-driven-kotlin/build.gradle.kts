@@ -5,6 +5,9 @@ plugins {
 dependencies {
     api(project(":core"))
     implementation(libs.jackson.databind)
+    // Reads the public API of the compile classpath from class files.
+    implementation(libs.asm)
+    implementation(libs.asm.util)
 }
 
 gradlePlugin {

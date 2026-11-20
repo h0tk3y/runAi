@@ -73,12 +73,16 @@ abstract class TranslateStringsTask : AbstractAiTask() {
         val prompt = prompt()
         val source = StringResourcesXml.parse(sourceStrings.get().asFile)
         val chunks = source.entries.chunked(chunkSize.get().coerceAtLeast(1))
+        val previous = previousResult()
+        val previousTranslations = previous?.files?.get("values-$locale/strings.xml")
+            ?.let { runCatching { StringResourcesXml.parse(it).entries.associateBy { entry -> entry.name } }.getOrNull() }
+            .orEmpty()
 
         val translated = mutableListOf<StringResource>()
         chunks.forEachIndexed { index, chunk ->
             translated += runner.run(
                 label = "$locale, chunk ${index + 1} of ${chunks.size}",
-                request = request(SystemPrompt.TEXT, prompt.render(chunk), TranslationPrompt.SCHEMA),
+                request = request(SystemPrompt.TEXT, prompt.render(chunk, previousTranslations, previous?.reason), TranslationPrompt.SCHEMA),
                 maxAttempts = maxAttempts.get(),
             ) { answer -> prompt.check(chunk, answer) }
         }

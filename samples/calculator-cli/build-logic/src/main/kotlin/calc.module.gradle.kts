@@ -14,6 +14,10 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+graidle {
+    model = "claude-haiku-5-5"
+}
+
 tasks.test {
     useJUnitPlatform()
 }

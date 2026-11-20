@@ -8,6 +8,8 @@ dependencies {
     implementation(project(":parser"))
     implementation(project(":evaluator"))
     implementation(project(":format"))
+    // A real third-party library. The model looks up its API on the compile classpath with grAIdle's tools.
+    implementation("com.github.ajalt.clikt:clikt:5.2.1")
 }
 
 specDrivenKotlin {

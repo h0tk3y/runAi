@@ -67,6 +67,9 @@ class SpecDrivenKotlinPlugin : Plugin<Project> {
                     attributes { specAttributes(project.objects) }
                 }.artifacts.resolvedArtifacts
             }
+            // The code sees what it compiles against; the tests also see this module's own API.
+            generateCode.configure { classpath.from(project.configurations.named("compileClasspath")) }
+            generateTests.configure { classpath.from(project.configurations.named("testCompileClasspath")) }
             project.tasks.withType(AbstractKotlinFromSpecTask::class.java).configureEach {
                 dependencySpecDirectories.from(specArtifacts.map { artifacts -> artifacts.map { it.file } })
                 dependencyModules.set(

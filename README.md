@@ -8,6 +8,7 @@ The model is not deterministic. grAIdle makes the *build* repeatable instead:
 - **CI never calls the model.** When the inputs match the lock file, the task only checks the committed result. When they do not match, a local build calls the model and updates the result, and a CI build fails and says what to run.
 - **Answers are structured.** The model answers with JSON that matches a schema, and grAIdle writes the files. The model never writes files itself.
 - **Fixed rules check every result.** Rules check every answer from the model, and every committed result, including hand edits. When an answer breaks a rule, grAIdle asks again with the problems listed. After `maxAttempts`, the task fails.
+- **Changes stay small.** When a task runs again, its prompt includes the committed result, and asks the model to keep every part that the changes do not affect. A file the model keeps (`"keep": true`) is copied byte for byte. `--regenerate` starts over without the previous result.
 
 ## Plugins
 
@@ -79,11 +80,11 @@ The base class handles everything else: the lock file, the modes, staging (a fai
 
 ```kotlin
 graidle {
-    model = "claude-opus-5-5"      // exact model ID; part of the fingerprint
+    model = "claude-haiku-5-5"     // the default; exact model ID; part of the fingerprint
     effort = "medium"              // low, medium, high, xhigh, max; part of the fingerprint
     maxTokens = 16_000L
     maxAttempts = 3                // attempts per request when answers break rules
-    refusalFallback = true         // if the model declines, the API retries on a fallback model
+    refusalFallback = true         // if the model declines, the API retries on a fallback model (not for Haiku, which has none)
     maxConcurrentRequests = 4      // across the whole build
     apiKey = "..."                 // default: ANTHROPIC_API_KEY, then the graidle.apiKey Gradle property
     baseUrl = "https://..."        // optional, for a proxy
@@ -187,11 +188,16 @@ The plugin registers:
 - `generateTestsFromSpec`, which writes tests into `graidle/test/kotlin`, a source directory of `test`. It does not see the implementation, so `test` checks the code against the spec.
 - `generateFromSpec`, which runs both.
 
-Each module publishes its spec in the `specElements` configuration, as a variant with `Category=documentation` and `DocsType=graidle-spec`. Both tasks resolve the spec variants of the modules on `compileClasspath`, using variant reselection. So a module's prompts contain the specs of its dependencies, never their code. A change to a dependency's spec makes the dependent results out of date; a change to its code does not.
+Each module publishes its spec in the `specElements` configuration, as a variant with `Category=documentation` and `DocsType=graidle-spec`. Both tasks resolve the spec variants of the modules on `compileClasspath`, using variant reselection, so a module's prompts contain the specs of its dependencies.
+
+Both tasks also get the whole compile classpath as an input: `compileClasspath` for the code, and `testCompileClasspath`, which includes the module's own classes, for the tests. That covers third-party libraries as much as project modules. The model explores the classpath with four read-only tools: `list_packages`, `list_classes`, `describe_class` and `search_classpath`. They read class files with ASM and show the public API only, never method bodies. The fingerprint covers the same public API of every classpath entry, so:
+- a library version that changes its API makes the result out of date;
+- a change to a dependency's spec makes the dependent results out of date;
+- a change inside a dependency's method bodies does not.
 
 Fixed rules check the generated sources before they are written:
 - `.kt` files at the path of their package, in a package from the API section.
-- Imports only from the Kotlin and Java standard libraries, the module itself, and its dependency modules.
+- Imports only from packages on the compile classpath, the Java standard library, the module itself, and the packages the dependency specs declare.
 - Every name in the API section declared.
 - The `requiredFiles` present.
 - A `@Test` in every test file.
@@ -236,10 +242,10 @@ Requirements: Gradle 9.9.2 (wrapper), JDK 17. Versions are in `gradle/libs.versi
 
 This is a proof of concept.
 
-- When the inputs of a task change, the task generates its whole result again. For translations, unchanged strings can get new wording, and hand edits are lost. Fingerprints for each item would fix this.
-- Requests are single-turn structured calls. Tasks put their declared inputs in the prompt, so the model sees only declared inputs. Agent tasks with tools need a staged workspace that contains only declared inputs. That is not built yet.
+- When the inputs of a task change, the model is asked to keep what the changes do not affect, and kept files are copied byte for byte. But within a file it regenerates, the model may still reword parts that did not need to change. Only the prompt asks it not to.
+- Tasks put their declared inputs in the prompt, and spec tasks add read-only tools over their declared classpath, so the model sees only declared inputs. There are no tools to run code or to write files.
 - `AiTask` reads and writes text files only.
-- grAIdle does not see compile errors or test failures of generated code, so it cannot send them back to the model. Fix the spec, use `--regenerate`, or edit the committed code. Closing this loop needs a compile check inside the task, or an agent with tools.
+- grAIdle does not see compile errors or test failures of generated code, so it cannot send them back to the model. Fix the spec, use `--regenerate`, or edit the committed code. A `compile` tool next to the classpath tools would close this loop.
 - The Anthropic SDK is a normal plugin dependency. Its OkHttp and Jackson versions can clash with other plugins in the same classloader. Worker API isolation or shading would fix this.
 - Plurals are checked against the allowed quantities, not against the CLDR rules of the target locale. `<string-array>` resources are not translated.
 - In a multi-project build, the first project that applies `dev.graidle` configures the shared service (API key, URL, concurrency).

@@ -11,6 +11,7 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CompileClasspath
 import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -56,6 +57,19 @@ abstract class AbstractKotlinFromSpecTask : AbstractAiTask() {
     @get:Optional
     abstract val instructions: Property<String>
 
+    /**
+     * The compile classpath: the libraries and dependency modules this code may use. The model explores their public
+     * API with [ClasspathTools]. Only the API counts for the fingerprint, so a change in a dependency's method bodies
+     * leaves the result up to date.
+     */
+    @get:CompileClasspath
+    abstract val classpath: ConfigurableFileCollection
+
+    private var index: ClasspathIndex? = null
+
+    /** The public API of [classpath], read once per task run. */
+    protected fun classpathIndex(): ClasspathIndex = index ?: ClasspathIndex.of(classpath.files.toList()).also { index = it }
+
     /** What the model must do, and the rules for this kind of file. Shown before the specifications. */
     protected abstract fun taskDescription(): String
 
@@ -73,6 +87,7 @@ abstract class AbstractKotlinFromSpecTask : AbstractAiTask() {
         dependencySpecs().forEach { dependency ->
             dependency.files.forEach { (path, text) -> fingerprint.put("dependency:${dependency.module}:$path", text) }
         }
+        classpathIndex().entries.forEachIndexed { i, entry -> fingerprint.put("classpath:$i", entry.apiHash) }
         fingerprintSettings(fingerprint)
     }
 
@@ -84,7 +99,8 @@ abstract class AbstractKotlinFromSpecTask : AbstractAiTask() {
         val schema = FileAnswers.schema(extraStatuses = SpecIssueReports.STATUSES, extraProperties = SpecIssueReports.SCHEMAS)
         val files = runner.run(
             label = path,
-            request = request(SystemPrompt.TEXT, renderPrompt(own, dependencies), schema),
+            request = request(SystemPrompt.TEXT, renderPrompt(own, dependencies), schema)
+                .copy(tools = ClasspathTools.tools(classpathIndex())),
             maxAttempts = maxAttempts.get(),
         ) { answer ->
             val issues = SpecIssueReports.read(answer)
@@ -96,7 +112,7 @@ abstract class AbstractKotlinFromSpecTask : AbstractAiTask() {
                     Validation.Invalid(problems)
                 }
             } else {
-                when (val parsed = FileAnswers.parse(answer)) {
+                when (val parsed = FileAnswers.parse(answer, previousResult()?.files.orEmpty())) {
                     is Validation.Valid -> check(parsed.value).let { if (it.isEmpty()) parsed else Validation.Invalid(it) }
                     else -> parsed
                 }
@@ -106,8 +122,9 @@ abstract class AbstractKotlinFromSpecTask : AbstractAiTask() {
     }
 
     private fun check(files: Map<String, String>): List<String> {
+        // The code may import what the classpath has, and what dependency specs declare but is not built yet.
         val dependencyPackages = dependencySpecs().flatMap { SpecApi.parse(it.files.values.joinToString("\n")).packages }.toSet()
-        return checkSources(files, ownApi(), dependencyPackages)
+        return checkSources(files, ownApi(), dependencyPackages + classpathIndex().packages.keys)
     }
 
     private fun renderPrompt(own: ModuleSpecFiles, dependencies: List<ModuleSpecFiles>): String = buildString {
@@ -127,7 +144,9 @@ abstract class AbstractKotlinFromSpecTask : AbstractAiTask() {
             append(SpecIssueReports.CONTRADICTION_RULE).append("\n\n")
         }
         append(SpecIssueReports.UNCLEAR_RULE).append("\n\n")
+        append(ClasspathTools.PROMPT).append("\n\n")
         instructions.orNull?.takeIf { it.isNotBlank() }?.let { append("Project instructions:\n").append(it.trim()).append("\n\n") }
+        previousResult()?.let { append(it.renderForFiles()) }
         append("Answer with Kotlin source files. ").append(FileAnswers.CONTENT_INSTRUCTION).append('\n')
     }
 

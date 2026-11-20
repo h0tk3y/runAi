@@ -6,7 +6,9 @@ import dev.graidle.ai.AiBackendException
 import dev.graidle.ai.AiLock
 import dev.graidle.ai.AiRequest
 import dev.graidle.ai.AiTaskFailedException
+import dev.graidle.ai.FileAnswers
 import dev.graidle.ai.Fingerprint
+import dev.graidle.ai.PreviousResult
 import dev.graidle.ai.StructuredRunner
 import dev.graidle.ai.Transcript
 import org.gradle.api.DefaultTask
@@ -50,7 +52,10 @@ abstract class AbstractAiTask : DefaultTask() {
     @get:Internal
     abstract val maxAttempts: Property<Int>
 
-    /** If the model declines, let the API retry on a fallback model. The transcript records which model answered. */
+    /**
+     * If the model declines, let the API retry on a fallback model. The transcript records which model answered.
+     * Ignored for Haiku models, which have no server-side fallback.
+     */
     @get:Internal
     abstract val refusalFallback: Property<Boolean>
 
@@ -105,19 +110,24 @@ abstract class AbstractAiTask : DefaultTask() {
         val outputDir = outputDirectory.get().asFile
 
         val committed = AiLock.read(lock)
-        val reason = when {
-            regenerate.get() -> "--regenerate was given"
-            committed == null -> "there is no committed result: ${lock.path} does not exist"
-            committed.fingerprint != currentFingerprint -> "the inputs changed since ${lock.path} was written"
+        // What the user reads, and what the model reads about the same situation.
+        val (reason, modelReason) = when {
+            regenerate.get() -> "--regenerate was given" to null
+            committed == null -> "there is no committed result: ${lock.path} does not exist" to null
+            committed.fingerprint != currentFingerprint ->
+                "the inputs changed since ${lock.path} was written" to "its inputs changed"
             else -> {
                 val problems = verify(outputDir)
                 if (problems.isEmpty()) {
                     logger.info("grAIdle: the committed result of {} matches its inputs.", path)
                     return
                 }
-                "the committed result breaks these rules:\n" + problems.joinToString("\n") { "  - $it" }
+                val list = problems.joinToString("\n") { "  - $it" }
+                "the committed result breaks these rules:\n$list" to "it breaks these rules:\n$list"
             }
         }
+        // With --regenerate, the model starts over: the committed result may be what is wrong.
+        previous = modelReason?.let { PreviousResult(FileAnswers.read(outputDir), it) }?.takeIf { it.files.isNotEmpty() }
 
         if (mode.get() != AiMode.LIVE) {
             throw GradleException(
@@ -149,6 +159,14 @@ abstract class AbstractAiTask : DefaultTask() {
         outputDir.deleteRecursively()
         staging.copyRecursively(outputDir)
     }
+
+    private var previous: PreviousResult? = null
+
+    /**
+     * While [generate] runs: the committed result that is being replaced, and why. Prompts show it, so the model
+     * keeps whatever the changes do not affect. Null when there is no committed result, and with `--regenerate`.
+     */
+    protected fun previousResult(): PreviousResult? = previous
 
     /** Adds everything the model sees, other than the model, effort and prompt version, to [fingerprint]. */
     protected abstract fun fingerprint(fingerprint: Fingerprint)

@@ -120,12 +120,13 @@ abstract class AiTask : AbstractAiTask() {
                 append("</file>\n\n")
             }
         }
+        previousResult()?.let { append(it.renderForFiles()) }
         append("Answer with these files and no others: ").append(declared.joinToString(", ")).append(".\n")
         append(FileAnswers.CONTENT_INSTRUCTION).append('\n')
     }
 
     private fun checkAnswer(answer: String, declared: List<String>): Validation<Map<String, String>> {
-        val files = when (val parsed = FileAnswers.parse(answer)) {
+        val files = when (val parsed = FileAnswers.parse(answer, previousResult()?.files.orEmpty())) {
             is Validation.Valid -> parsed.value
             else -> return parsed
         }
@@ -186,6 +187,6 @@ abstract class AiTask : AbstractAiTask() {
 
     private companion object {
         /** Change when the prompt text, the schema or the built-in checks change. */
-        const val PROMPT_VERSION = 1
+        const val PROMPT_VERSION = 2
     }
 }

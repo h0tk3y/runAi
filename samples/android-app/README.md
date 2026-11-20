@@ -41,7 +41,7 @@ Create an API key in the Claude Console. Then give it to Gradle in one of two wa
   graidle.apiKey=sk-ant-...
   ```
 
-To use a different model, set `graidle { model = "..." }` in `app/build.gradle.kts`. The default is `claude-opus-5-5`; `claude-haiku-5-5` costs much less. The model ID is part of the fingerprint, so changing it makes every committed result out of date.
+To use a different model, set `graidle { model = "..." }` in `app/build.gradle.kts`. The default is `claude-haiku-5-5`; a larger model such as `claude-opus-5-5` costs more. The model ID is part of the fingerprint, so changing it makes every committed result out of date.
 
 ## 3. Generate the translations
 

@@ -19,7 +19,7 @@ abstract class GraidleExtension {
     /** How many times a task may ask again when an answer fails the checks. */
     abstract val maxAttempts: Property<Int>
 
-    /** Let the API retry a declined request on a fallback model. */
+    /** Let the API retry a declined request on a fallback model. Ignored for Haiku models, which have none. */
     abstract val refusalFallback: Property<Boolean>
 
     /**

@@ -45,13 +45,15 @@ For each module, the plugin registers two grAIdle tasks:
 
 The two tasks never see each other's output. They work from the same spec separately, so `test` checks the code against the spec.
 
-Each module also publishes its spec as a `graidle-spec` variant. Both tasks read the specs of the modules on the compile classpath from that variant. So `parser` sees the specs of `ast` and `lexer`, but never their code. Check what a module publishes with `./gradlew :ast:outgoingVariants --variant specElements`.
+Each module also publishes its spec as a `graidle-spec` variant. Both tasks read the specs of the modules on the compile classpath from that variant. So `parser` sees the specs of `ast` and `lexer`. Check what a module publishes with `./gradlew :ast:outgoingVariants --variant specElements`.
+
+The model also explores the module's compile classpath with read-only tools that show the public API of every class on it, but never method bodies. That is how `cli` uses Clikt, a real third-party library from Maven Central: the model looks up Clikt's commands, arguments and errors in the jars, as it does for the classes of `lexer` or `parser`.
 
 Before the code is written, fixed rules check every answer from the model:
 
 - every file is a `.kt` file at the path of its package
 - the packages are the ones the API section declares
-- imports come only from the Kotlin and Java standard libraries, this module, and the dependency modules. The code cannot use a library that the build does not have.
+- imports come only from packages on the compile classpath and the Java standard library. The code cannot use a library that the build does not have.
 - every name in the API section is declared
 - `cli` includes `Main.kt`, because the `application` plugin needs the class name
 - every test file has a `@Test`
@@ -75,7 +77,7 @@ All commands run in this directory (`samples/calculator-cli`).
 ./gradlew generateFromSpec
 ```
 
-This makes 12 model requests: code and tests for six modules. The results are in `<module>/graidle/main/kotlin` and `<module>/graidle/test/kotlin`, with a `.lock` file next to each. The transcripts are in `<module>/build/graidle/transcripts/`.
+This makes 12 model requests with `claude-haiku-5-5`, the default: code and tests for six modules. Tool calls add turns to a request. Generation runs from the bottom up, because each module compiles against the modules it depends on. The results are in `<module>/graidle/main/kotlin` and `<module>/graidle/test/kotlin`, with a `.lock` file next to each. The transcripts are in `<module>/build/graidle/transcripts/`.
 
 ## 3. Build, test and run
 
@@ -125,7 +127,8 @@ grAIdle does not yet see compiler errors or test failures, so it cannot send the
 ## Things to try
 
 - **Change a rule.** In `lexer/src/main/spec/lexer.md`, allow `.5` as a number. The lexer's code and tests are now out of date. So are those of `parser` and `cli`, because they see the lexer spec. Run `./gradlew build` locally to generate them again, or `CI=true ./gradlew build` to see CI reject the change.
-- **Change code, not a spec.** Edit the committed code of `lexer` by hand. The other modules stay up to date: they depend on the lexer spec, not on its code.
+- **Change code, not a spec.** Edit the inside of a function in the committed code of `lexer`. The other modules stay up to date: they depend on the lexer spec and on its public API, not on its method bodies.
+- **Change a rule, keep the rest.** Change one rule in a spec and build. The prompt includes the committed result and asks the model to keep what the change does not affect, so the diff stays small.
 - **Create a contradiction.** Add this rule to `cli/src/main/spec/cli.md`: "`parse` returns `null` for an empty list of tokens, and `run` then writes nothing and returns `0`." Rule 4 of the parser spec says that `parse` throws `ParseException("Empty expression", 0)` instead. Run `./gradlew :cli:generateKotlinFromSpec`. The task should stop, quote both rules, and ask you to resolve the contradiction, instead of picking one.
 - **Add a module.** For example, add `memory`, which stores the last result as `ans`. Write its spec, add it to `settings.gradle.kts`, and add the dependencies. Only the new module and the modules that now depend on it are generated.
 

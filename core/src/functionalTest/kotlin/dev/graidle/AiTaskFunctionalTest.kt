@@ -121,9 +121,40 @@ class AiTaskFunctionalTest {
     }
 
     @Test
+    fun `regenerating shows the previous result, and a kept file stays as it was`() {
+        server.enqueue(goodAnswer)
+        run("summarizeDocs", "-Pgraidle.mode=live")
+        val committed = result.readText()
+        projectDir.resolve("docs/hotfix.md").writeText("Hotfixes need two approvals.")
+        server.enqueue("""{"status":"ok","reason":"","files":[{"path":"summary.md","content":"","keep":true}]}""")
+
+        run("summarizeDocs", "-Pgraidle.mode=live")
+
+        assertThat(server.requests).hasSize(2)
+        assertThat(server.requests[0].body).doesNotContain("Previous result")
+        assertThat(server.requests[1].body).contains(
+            "The task generated a result before, shown below. It must be generated again, because its inputs changed",
+            "Keep every part of it that the changes do not affect exactly as it is",
+            "Previous result:",
+            "Two documents about the release process.",
+        )
+        assertThat(result.readText()).isEqualTo(committed)
+    }
+
+    @Test
+    fun `--regenerate starts over without the previous result`() {
+        server.enqueue(goodAnswer, goodAnswer)
+        run("summarizeDocs", "-Pgraidle.mode=live")
+
+        run("summarizeDocs", "--regenerate", "-Pgraidle.mode=live")
+
+        assertThat(server.requests[1].body).doesNotContain("Previous result")
+    }
+
+    @Test
     fun `changing the model makes the committed result out of date`() {
-        assertChangeMakesResultStale("graidle { model = \"claude-haiku-5-5\" }", "\"model\":\"claude-haiku-5-5\"")
-        assertThat(projectDir.resolve("graidle/summarizeDocs.lock").readText()).contains("model=claude-haiku-5-5")
+        assertChangeMakesResultStale("graidle { model = \"claude-opus-5-5\" }", "\"model\":\"claude-opus-5-5\"")
+        assertThat(projectDir.resolve("graidle/summarizeDocs.lock").readText()).contains("model=claude-opus-5-5")
     }
 
     @Test
